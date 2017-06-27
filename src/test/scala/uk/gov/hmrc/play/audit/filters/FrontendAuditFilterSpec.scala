@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.play.audit.filters
 
+import java.util.concurrent.TimeUnit
+
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.scaladsl.Source
@@ -270,7 +272,7 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers with Eventually
 
       "when the request succeeds" in {
         val value1 = filter.apply(nextAction)(request)
-        await(value1.run)
+        await(value1.run)(akka.util.Timeout(100, TimeUnit.MINUTES))
         behave like expected
       }
 
@@ -283,7 +285,7 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers with Eventually
         val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
         event.auditType shouldBe EventTypes.RequestReceived
         event.detail should contain("deviceID" -> deviceID)
-      }
+       } (PatienceConfig(scaled(Span(1500000, Millis)),scaled(Span(15000, Millis)) ))
     }
 
   }
