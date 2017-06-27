@@ -187,7 +187,8 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers with Eventually
       }
 
       def expected() = eventually {
-        val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
+        val event1 = filter.auditConnector.recordedEvent
+        val event = event1.get.asInstanceOf[DataEvent]
         event.auditType shouldBe EventTypes.RequestReceived
         event.detail should contain("deviceFingerprint" -> "-")
       }
@@ -268,7 +269,8 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers with Eventually
       val request = FakeRequest("GET", "/foo").withHeaders(HeaderNames.deviceID -> deviceID)
 
       "when the request succeeds" in {
-        await(filter.apply(nextAction)(request).run)
+        val value1 = filter.apply(nextAction)(request)
+        await(value1.run)
         behave like expected
       }
 

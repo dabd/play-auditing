@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.play.audit.http
 
+import uk.gov.hmrc.play.HeaderCarrierConverter
 import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.model.DataEvent
 import uk.gov.hmrc.play.http.HeaderCarrier
@@ -39,7 +40,7 @@ trait HttpAuditEvent {
   }
 
   protected[http] def dataEvent(eventType: String, transactionName: String, request: RequestHeader)
-                               (implicit hc: HeaderCarrier = HeaderCarrier.fromHeadersAndSession(request.headers)) = {
+                               (implicit hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(request.headers)) = {
 
     import auditDetailKeys._
     import headers._

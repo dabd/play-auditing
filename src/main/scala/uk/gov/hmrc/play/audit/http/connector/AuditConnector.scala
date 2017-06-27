@@ -16,14 +16,13 @@
 
 package uk.gov.hmrc.play.audit.http.connector
 
-import play.api.{LoggerLike, Logger}
+import play.api.{Logger, LoggerLike}
 import play.api.libs.json.{JsValue, Json}
 import uk.gov.hmrc.play.audit.http.config.AuditingConfig
 import uk.gov.hmrc.play.audit.model.{AuditEvent, MergedDataEvent}
-import uk.gov.hmrc.play.connectors.{PlayWSRequestBuilder, RequestBuilder, Connector}
+import uk.gov.hmrc.play.connectors.{Connector, PlayWSRequestBuilder, RequestBuilder}
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
-import uk.gov.hmrc.play.http.logging.{ConnectionTracing, LoggingDetails}
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
+import uk.gov.hmrc.play.http.logging.{ConnectionTracing, LoggingDetails, MdcLoggingExecutionContext}
 import uk.gov.hmrc.play.http.ws.WSHttpResponse
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -74,6 +73,8 @@ trait LoggerProvider {
 trait ResultHandler extends ResponseFormatter {
   this: LoggerProvider =>
   protected def handleResult(resultF: Future[HttpResponse], body: JsValue)(implicit ld: LoggingDetails): Future[HttpResponse] = {
+    import MdcLoggingExecutionContext._
+
     resultF
       .recoverWith { case t =>
         val message = makeFailureMessage(body)
@@ -94,10 +95,13 @@ trait ResultHandler extends ResponseFormatter {
 trait AuditorImpl extends Auditor with ConnectionTracing with ResultHandler {
   this: ConfigProvider with RequestBuilder with LoggerProvider =>
 
-  protected def callAuditConsumer(url:String , body: JsValue)(implicit hc: HeaderCarrier, ec : ExecutionContext): Future[HttpResponse] =
+  protected def callAuditConsumer(url:String , body: JsValue)(implicit hc: HeaderCarrier, ec : ExecutionContext): Future[HttpResponse] = {
+    val mdc = new MdcLoggingExecutionContext(ec, hc.mdcData)
+
     withTracing("Post", url) {
-      buildRequest(url).post(body).map(new WSHttpResponse(_))(ec)
-    }
+      buildRequest(url).post(body).map(new WSHttpResponse(_))(mdc)
+    }(hc, mdc)
+  }
 
   def sendEvent(event: AuditEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext): Future[AuditResult] =
     sendEvent(auditingConfig.consumer.map(_.singleEventUrl), Json.toJson(event))
@@ -108,7 +112,9 @@ trait AuditorImpl extends Auditor with ConnectionTracing with ResultHandler {
   def sendLargeMergedEvent(event: MergedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier()): Future[AuditResult] =
     sendEvent(auditingConfig.consumer.map(_.largeMergedEventUrl), Json.toJson(event))
 
-  private def sendEvent(urlOption: Option[String], body: JsValue)(implicit hc: HeaderCarrier) = {
+  private def sendEvent(urlOption: Option[String], body: JsValue)(implicit hc: HeaderCarrier) =  {
+    import MdcLoggingExecutionContext._
+
     if (auditingConfig.enabled) {
       val url = urlOption.getOrElse( throw new Exception("Missing event consumer URL") )
       handleResult(callAuditConsumer(url, body), body).map { _ => AuditResult.Success }
