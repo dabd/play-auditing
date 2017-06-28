@@ -24,7 +24,7 @@ import uk.gov.hmrc.play.audit.EventTypes
 import uk.gov.hmrc.play.audit.model.DeviceFingerprint
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
-//import scala.concurrent.ExecutionContext.Implicits.global
+////!@import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.util.{Failure, Success, Try}
 

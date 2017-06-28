@@ -40,7 +40,8 @@ import uk.gov.hmrc.play.audit.{EventKeys, EventTypes}
 import uk.gov.hmrc.play.http.{CookieNames, HeaderCarrier, HeaderNames}
 import uk.gov.hmrc.play.test.Http._
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits._
+
 import scala.concurrent.Future
 
 

@@ -32,7 +32,9 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.Concurrent.await
 import uk.gov.hmrc.play.test.Http._
 
-import scala.concurrent.ExecutionContext.Implicits.global
+////!@import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits._
+
 import scala.concurrent.{ExecutionContext, Future}
 
 class AuditFilterSpec extends WordSpecLike with Matchers with Eventually with ScalaFutures with FilterFlowMock {
@@ -76,9 +78,14 @@ class AuditFilterSpec extends WordSpecLike with Matchers with Eventually with Sc
       implicit val system = ActorSystem()
       implicit val materializer = ActorMaterializer()
 
-      val result = await(auditFilter.apply(nextAction)(request).run)
+      val value1 = auditFilter.apply(nextAction)(request)
+      Thread.sleep(2000)
+      val result = await(value1.run)
+      Thread.sleep(2000)
 
       await(enumerateResponseBody(result))
+
+      Thread.sleep(2000)
 
       eventually {
         val events = mockAuditConnector.events

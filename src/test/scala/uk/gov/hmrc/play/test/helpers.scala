@@ -33,7 +33,8 @@ object Concurrent {
   import scala.concurrent.duration._
   import scala.concurrent.{Await, Future}
 
-  val defaultTimeout = 5 seconds
+  //!@
+  val defaultTimeout = 5 minutes
 
   implicit def extractAwait[A](future: Future[A]) = await[A](future)
 

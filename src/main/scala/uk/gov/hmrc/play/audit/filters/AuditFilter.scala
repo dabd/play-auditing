@@ -32,9 +32,10 @@ import uk.gov.hmrc.play.audit.http.HttpAuditEvent
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.http.HeaderCarrier
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.concurrent.Execution.Implicits._
 
-//import scala.concurrent.ExecutionContext.Implicits.global
+
+////!@import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
 import scala.util.{Failure, Success, Try}
 
@@ -125,7 +126,9 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
       }
 
       if (needsAuditing(requestHeader)) {
-        onCompleteWithInput(loggingContext, next, performAudit)
+        val next1 = next
+        val context = loggingContext
+        onCompleteWithInput(context, next1, performAudit)
       } else next
     }
   }

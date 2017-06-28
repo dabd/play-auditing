@@ -85,7 +85,9 @@ trait AuditTags {
 class Audit(applicationName: String, auditConnector: AuditConnector) extends AuditTags {
 
   import Audit._
-  import scala.concurrent.ExecutionContext.Implicits.global
+  //!@//!@import scala.concurrent.ExecutionContext.Implicits.global
+  import play.api.libs.concurrent.Execution.Implicits._
+
 
   def sendDataEvent: (DataEvent) => Unit = auditConnector.sendEvent(_)
 
@@ -107,7 +109,10 @@ class Audit(applicationName: String, auditConnector: AuditConnector) extends Aud
 
   def asyncAs[A](auditMagnet: AuditAsMagnet[A])(body: AsyncBody[A])(implicit hc: HeaderCarrier): Future[A] = {
 
-//    import MdcLoggingExecutionContext._
+
+    import play.api.libs.concurrent.Execution.Implicits._
+
+//    import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
     val invokedBody: Future[A] =
       try { body() }

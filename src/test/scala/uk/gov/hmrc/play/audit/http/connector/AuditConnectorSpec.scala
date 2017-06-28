@@ -33,6 +33,7 @@ import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent}
 import uk.gov.hmrc.play.connectors.RequestBuilder
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
+import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.concurrent.Future
 
@@ -149,7 +150,7 @@ class ResultHandlerSpec extends WordSpec
 class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFutures with MockitoSugar with OneInstancePerTest {
   import AuditResult._
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+  //!@import scala.concurrent.ExecutionContext.Implicits.global
 
   val eventTypes = new EventTypes {}
 

@@ -26,7 +26,7 @@ import uk.gov.hmrc.play.http.hooks.HttpHook
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.time.DateTimeUtils
 
-import scala.concurrent.ExecutionContext.Implicits.global
+//!@//!@import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.matching.Regex
 
@@ -38,6 +38,8 @@ trait HttpAuditing extends DateTimeUtils {
   def auditDisabledForPattern: Regex = """http(s)?:\/\/.*\.(service|mdtp)($|[:\/])""".r
 
   object AuditingHook extends HttpHook {
+    import play.api.libs.concurrent.Execution.Implicits._
+
     override def apply(url: String, verb: String, body: Option[_], responseF: Future[HttpResponse])(implicit hc: HeaderCarrier): Unit = {
       val request = HttpRequest(url, verb, body, now)
       responseF.map {
@@ -51,11 +53,15 @@ trait HttpAuditing extends DateTimeUtils {
 
   def auditFromPlayFrontend(url: String, response: HttpResponse, hc: HeaderCarrier) = audit(HttpRequest(url, "", None, now), response)(hc)
 
-  private[http] def audit(request: HttpRequest, responseToAudit: HttpResponse)(implicit hc: HeaderCarrier): Unit =
+  private[http] def audit(request: HttpRequest, responseToAudit: HttpResponse)(implicit hc: HeaderCarrier): Unit = {
+    import play.api.libs.concurrent.Execution.Implicits._
     if (isAuditable(request.url)) auditConnector.sendMergedEvent(dataEventFor(request, responseToAudit))
+  }
 
-  private[http] def auditRequestWithException(request: HttpRequest, errorMessage: String)(implicit hc: HeaderCarrier): Unit =
+  private[http] def auditRequestWithException(request: HttpRequest, errorMessage: String)(implicit hc: HeaderCarrier): Unit = {
+    import play.api.libs.concurrent.Execution.Implicits._
     if (isAuditable(request.url)) auditConnector.sendMergedEvent(dataEventFor(request, errorMessage))
+  }
 
   private def dataEventFor(request: HttpRequest, errorMesssage: String)(implicit hc: HeaderCarrier) = {
     val responseDetails = Map(FailedRequestMessage -> errorMesssage)
