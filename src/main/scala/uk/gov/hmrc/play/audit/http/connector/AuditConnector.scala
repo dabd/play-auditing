@@ -18,14 +18,17 @@ package uk.gov.hmrc.play.audit.http.connector
 
 import play.api.{Logger, LoggerLike}
 import play.api.libs.json.{JsValue, Json}
+import play.api.libs.ws.{WS, WSRequest}
+import uk.gov.hmrc.play.audit.WSHttpResponse
 import uk.gov.hmrc.play.audit.http.config.AuditingConfig
 import uk.gov.hmrc.play.audit.model.{AuditEvent, MergedDataEvent}
-import uk.gov.hmrc.play.connectors.{Connector, PlayWSRequestBuilder, RequestBuilder}
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
-import uk.gov.hmrc.play.http.logging.{ConnectionTracing, LoggingDetails, MdcLoggingExecutionContext}
-import uk.gov.hmrc.play.http.ws.WSHttpResponse
+import uk.gov.hmrc.play.http.logging.{ConnectionTracing, LoggingDetails}
 
 import scala.concurrent.{ExecutionContext, Future}
+
+
+import play.api.Play.current
 
 trait AuditEventFailureKeys {
   private val EventMissed = "DS_EventMissed"
@@ -55,7 +58,7 @@ trait ResponseFormatter {
 trait Auditor {
   def sendEvent(event: AuditEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext): Future[AuditResult]
   def sendMergedEvent(event: MergedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext): Future[AuditResult]
-  def sendLargeMergedEvent(event: MergedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier()): Future[AuditResult]
+  def sendLargeMergedEvent(event: MergedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext): Future[AuditResult]
 }
 
 trait ConfigProvider {
@@ -72,8 +75,7 @@ trait LoggerProvider {
 
 trait ResultHandler extends ResponseFormatter {
   this: LoggerProvider =>
-  protected def handleResult(resultF: Future[HttpResponse], body: JsValue)(implicit ld: LoggingDetails): Future[HttpResponse] = {
-    import MdcLoggingExecutionContext._
+  protected def handleResult(resultF: Future[HttpResponse], body: JsValue)(implicit ex: ExecutionContext): Future[HttpResponse] = {
 
     resultF
       .recoverWith { case t =>
@@ -93,14 +95,14 @@ trait ResultHandler extends ResponseFormatter {
 }
 
 trait AuditorImpl extends Auditor with ConnectionTracing with ResultHandler {
-  this: ConfigProvider with RequestBuilder with LoggerProvider =>
+  this: ConfigProvider with LoggerProvider =>
+
+  protected def buildRequest(url: String)(implicit hc: HeaderCarrier): WSRequest = WS.url(url).withHeaders(hc.headers: _*)
 
   protected def callAuditConsumer(url:String , body: JsValue)(implicit hc: HeaderCarrier, ec : ExecutionContext): Future[HttpResponse] = {
-    val mdc = new MdcLoggingExecutionContext(ec, hc.mdcData)
-
     withTracing("Post", url) {
-      buildRequest(url).post(body).map(new WSHttpResponse(_))(mdc)
-    }(hc, mdc)
+      buildRequest(url).post(body).map(new WSHttpResponse(_))(ec)
+    }(hc, ec)
   }
 
   def sendEvent(event: AuditEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext): Future[AuditResult] =
@@ -109,12 +111,10 @@ trait AuditorImpl extends Auditor with ConnectionTracing with ResultHandler {
   def sendMergedEvent(event: MergedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext): Future[AuditResult] =
     sendEvent(auditingConfig.consumer.map(_.mergedEventUrl), Json.toJson(event))
 
-  def sendLargeMergedEvent(event: MergedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier()): Future[AuditResult] =
+  def sendLargeMergedEvent(event: MergedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext): Future[AuditResult] =
     sendEvent(auditingConfig.consumer.map(_.largeMergedEventUrl), Json.toJson(event))
 
-  private def sendEvent(urlOption: Option[String], body: JsValue)(implicit hc: HeaderCarrier) =  {
-    import MdcLoggingExecutionContext._
-
+  private def sendEvent(urlOption: Option[String], body: JsValue)(implicit hc: HeaderCarrier, ec : ExecutionContext) =  {
     if (auditingConfig.enabled) {
       val url = urlOption.getOrElse( throw new Exception("Missing event consumer URL") )
       handleResult(callAuditConsumer(url, body), body).map { _ => AuditResult.Success }
@@ -125,7 +125,7 @@ trait AuditorImpl extends Auditor with ConnectionTracing with ResultHandler {
   }
 }
 
-trait AuditConnector extends AuditorImpl with ConfigProvider with PlayWSRequestBuilder with LoggerProvider {
+trait AuditConnector extends AuditorImpl with ConfigProvider with LoggerProvider {
   def auditingConfig: AuditingConfig
   val logger = Logger
 }

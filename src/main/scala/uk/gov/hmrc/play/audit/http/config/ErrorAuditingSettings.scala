@@ -21,12 +21,12 @@ import play.api.mvc.{RequestHeader, Result}
 import uk.gov.hmrc.play.audit.EventTypes._
 import uk.gov.hmrc.play.audit.http.HttpAuditEvent
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.http.{JsValidationException, NotFoundException}
+import uk.gov.hmrc.play.http.NotFoundException
 
 import scala.concurrent.Future
 
 trait ErrorAuditingSettings extends GlobalSettings with HttpAuditEvent {
-  //!@import scala.concurrent.ExecutionContext.Implicits.global
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   def auditConnector: AuditConnector
 
@@ -35,11 +35,9 @@ trait ErrorAuditingSettings extends GlobalSettings with HttpAuditEvent {
   private val badRequestError = "Request bad format exception"
 
   override def onError(request: RequestHeader, ex: Throwable): Future[Result] = {
-    import play.api.libs.concurrent.Execution.Implicits._
-
     val code = ex match {
       case e: NotFoundException => ResourceNotFound
-      case jsError: JsValidationException => ServerValidationError
+      //case jsError: JsValidationException => ServerValidationError
       case _ => ServerInternalError
     }
 
@@ -49,14 +47,12 @@ trait ErrorAuditingSettings extends GlobalSettings with HttpAuditEvent {
   }
 
   override def onHandlerNotFound(request: RequestHeader): Future[Result] = {
-    import play.api.libs.concurrent.Execution.Implicits._
-
     auditConnector.sendEvent(dataEvent(ResourceNotFound, notFoundError, request))
     super.onHandlerNotFound(request)
   }
 
   override def onBadRequest(request: RequestHeader, error: String): Future[Result] = {
-    import play.api.libs.concurrent.Execution.Implicits._
+
 
     auditConnector.sendEvent(dataEvent(ServerValidationError, badRequestError, request))
     super.onBadRequest(request, error)

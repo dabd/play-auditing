@@ -31,9 +31,7 @@ import play.api.libs.ws.{WSRequest, WSResponse}
 import uk.gov.hmrc.play.audit.EventTypes
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent}
-import uk.gov.hmrc.play.connectors.RequestBuilder
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
-import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.concurrent.Future
 
@@ -90,6 +88,9 @@ class ResultHandlerSpec extends WordSpec
                        with MockitoSugar
                        with ScalaFutures
                        with LoggerProvider {
+
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   val mockLogger = mock[Logger]
   when(mockLogger.isWarnEnabled()).thenReturn(true)
   override val logger = new LoggerLike {
@@ -104,8 +105,7 @@ class ResultHandlerSpec extends WordSpec
         override val status = 200
       }
 
-      handleResult(Future.successful(response), body)(new HeaderCarrier)
-
+      handleResult(Future.successful(response), body)
       verifyNoMoreInteractions(mockLogger)
     }
 
@@ -125,7 +125,7 @@ class ResultHandlerSpec extends WordSpec
       }
 
       val f = Future.successful(response)
-      handleResult(f, body)(new HeaderCarrier).failed.futureValue
+      handleResult(f, body).failed.futureValue
 
       val isValidFailureMessage = new IsValidFailureMessage(AuditEventFailureKeys.LoggingAuditFailureResponseKey,
                                                             body.toString(), code.toString)
@@ -137,7 +137,7 @@ class ResultHandlerSpec extends WordSpec
       val body = Json.obj("key" -> "value")
 
       val f = Future.failed(new Exception("failed"))
-      handleResult(f, body)(new HeaderCarrier).failed.futureValue
+      handleResult(f, body).failed.futureValue
 
 
       val isValidFailureMessage = new IsValidFailureMessage(AuditEventFailureKeys.LoggingAuditRequestFailureKey,
@@ -149,8 +149,7 @@ class ResultHandlerSpec extends WordSpec
 
 class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFutures with MockitoSugar with OneInstancePerTest {
   import AuditResult._
-
-  //!@import scala.concurrent.ExecutionContext.Implicits.global
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   val eventTypes = new EventTypes {}
 
@@ -160,7 +159,7 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
 
   val mockRequestHolder = mock[WSRequest]
 
-  def mockConnector(config: AuditingConfig) = new AuditorImpl with ConfigProvider with RequestBuilder with LoggerProvider {
+  def mockConnector(config: AuditingConfig) = new AuditorImpl with ConfigProvider with LoggerProvider {
     override def auditingConfig = config
     override def buildRequest(url: String)(implicit hc: HeaderCarrier) = mockRequestHolder
     override val logger = mock[LoggerLike]

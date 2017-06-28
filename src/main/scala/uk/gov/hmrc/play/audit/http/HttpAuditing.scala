@@ -26,6 +26,8 @@ import uk.gov.hmrc.play.http.hooks.HttpHook
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.time.DateTimeUtils
 
+import scala.concurrent.ExecutionContext
+
 //!@//!@import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.matching.Regex
@@ -38,9 +40,8 @@ trait HttpAuditing extends DateTimeUtils {
   def auditDisabledForPattern: Regex = """http(s)?:\/\/.*\.(service|mdtp)($|[:\/])""".r
 
   object AuditingHook extends HttpHook {
-    import play.api.libs.concurrent.Execution.Implicits._
 
-    override def apply(url: String, verb: String, body: Option[_], responseF: Future[HttpResponse])(implicit hc: HeaderCarrier): Unit = {
+    override def apply(url: String, verb: String, body: Option[_], responseF: Future[HttpResponse])(implicit hc: HeaderCarrier, ec: ExecutionContext): Unit = {
       val request = HttpRequest(url, verb, body, now)
       responseF.map {
         response =>
@@ -51,15 +52,14 @@ trait HttpAuditing extends DateTimeUtils {
     }
   }
 
-  def auditFromPlayFrontend(url: String, response: HttpResponse, hc: HeaderCarrier) = audit(HttpRequest(url, "", None, now), response)(hc)
+  def auditFromPlayFrontend(url: String, response: HttpResponse, hc: HeaderCarrier)(implicit ec: ExecutionContext) =
+    audit(HttpRequest(url, "", None, now), response)(hc, ec)
 
-  private[http] def audit(request: HttpRequest, responseToAudit: HttpResponse)(implicit hc: HeaderCarrier): Unit = {
-    import play.api.libs.concurrent.Execution.Implicits._
+  private[http] def audit(request: HttpRequest, responseToAudit: HttpResponse)(implicit hc: HeaderCarrier, ec: ExecutionContext): Unit = {
     if (isAuditable(request.url)) auditConnector.sendMergedEvent(dataEventFor(request, responseToAudit))
   }
 
-  private[http] def auditRequestWithException(request: HttpRequest, errorMessage: String)(implicit hc: HeaderCarrier): Unit = {
-    import play.api.libs.concurrent.Execution.Implicits._
+  private[http] def auditRequestWithException(request: HttpRequest, errorMessage: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Unit = {
     if (isAuditable(request.url)) auditConnector.sendMergedEvent(dataEventFor(request, errorMessage))
   }
 

@@ -19,7 +19,7 @@ package uk.gov.hmrc.play.audit.model
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.http.HeaderCarrier
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 
@@ -82,18 +82,19 @@ trait AuditTags {
   val xRequestId = "X-Request-ID"
   val TransactionName = "transactionName"
 }
+
 class Audit(applicationName: String, auditConnector: AuditConnector) extends AuditTags {
 
   import Audit._
   //!@//!@import scala.concurrent.ExecutionContext.Implicits.global
-  import play.api.libs.concurrent.Execution.Implicits._
 
+  def sendDataEvent (event: DataEvent)(implicit ec : ExecutionContext): Unit =
+    auditConnector.sendEvent(event)
 
-  def sendDataEvent: (DataEvent) => Unit = auditConnector.sendEvent(_)
+  def sendLargeMergedDataEvent (event: MergedDataEvent)(implicit ec : ExecutionContext): Unit =
+    auditConnector.sendLargeMergedEvent(event)
 
-  def sendLargeMergedDataEvent: (MergedDataEvent) => Unit = auditConnector.sendLargeMergedEvent(_)
-
-  private def sendEvent[A](auditMagnet: AuditAsMagnet[A], eventType: String, outputs: Map[String, String])(implicit hc: HeaderCarrier): Unit = {
+  private def sendEvent[A](auditMagnet: AuditAsMagnet[A], eventType: String, outputs: Map[String, String])(implicit hc: HeaderCarrier, ec : ExecutionContext): Unit = {
     val requestId = hc.requestId.map(_.value).getOrElse("")
     sendDataEvent(DataEvent(
       auditSource = applicationName,
@@ -102,17 +103,12 @@ class Audit(applicationName: String, auditConnector: AuditConnector) extends Aud
       detail = auditMagnet.inputs.map(inputKeys) ++ outputs))
   }
 
-  private def givenResultSendAuditEvent[A](auditMagnet: AuditAsMagnet[A])(implicit hc: HeaderCarrier): PartialFunction[TransactionResult, Unit] = {
+  private def givenResultSendAuditEvent[A](auditMagnet: AuditAsMagnet[A])(implicit hc: HeaderCarrier, ec : ExecutionContext): PartialFunction[TransactionResult, Unit] = {
     case TransactionSuccess(m) => sendEvent(auditMagnet, auditMagnet.eventTypes._1, m.map(outputKeys))
     case TransactionFailure(r, m) => sendEvent(auditMagnet, auditMagnet.eventTypes._2, r.map(reason => Map("transactionFailureReason" -> reason)).getOrElse(Map.empty) ++ m.map(outputKeys))
   }
 
-  def asyncAs[A](auditMagnet: AuditAsMagnet[A])(body: AsyncBody[A])(implicit hc: HeaderCarrier): Future[A] = {
-
-
-    import play.api.libs.concurrent.Execution.Implicits._
-
-//    import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
+  def asyncAs[A](auditMagnet: AuditAsMagnet[A])(body: AsyncBody[A])(implicit hc: HeaderCarrier, ec : ExecutionContext): Future[A] = {
 
     val invokedBody: Future[A] =
       try { body() }
@@ -126,7 +122,7 @@ class Audit(applicationName: String, auditConnector: AuditConnector) extends Aud
     invokedBody
   }
 
-  def as[A](auditMagnet: AuditAsMagnet[A])(body: Body[A])(implicit hc: HeaderCarrier): A = {
+  def as[A](auditMagnet: AuditAsMagnet[A])(body: Body[A])(implicit hc: HeaderCarrier, ec : ExecutionContext): A = {
     val result: Try[A] = Try(body())
 
     result

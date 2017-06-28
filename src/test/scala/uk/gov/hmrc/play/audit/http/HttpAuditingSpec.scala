@@ -36,6 +36,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with Eventually with BeforeAndAfterAll {
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   implicit def mockDatastreamConnector(ds: AuditConnector) : MockAuditConnector = ds.asInstanceOf[MockAuditConnector]
 
@@ -55,12 +56,11 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
   }
 
   class HttpWithAuditing extends HttpAuditing {
-
     override lazy val appName: String = "httpWithAuditSpec"
     override lazy val auditConnector: AuditConnector = new MockAuditConnector
 
-    def auditRequestWithResponseF(url: String, verb: String, requestBody: Option[_], response: Future[HttpResponse])(implicit hc: HeaderCarrier): Unit =
-      AuditingHook(url, verb, requestBody, response)(hc)
+    def auditRequestWithResponseF(url: String, verb: String, requestBody: Option[_], response: Future[HttpResponse])(implicit hc: HeaderCarrier, ec: ExecutionContext): Unit =
+      AuditingHook(url, verb, requestBody, response)
 
     var now_call_count = 0
     override def now = {
@@ -124,6 +124,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
 
     "handle the case of an exception being raised inside the future and still send an audit message" in {
 
+
       implicit val hc = HeaderCarrier(deviceID = Some(deviceID))
 
       val httpWithAudit = new HttpWithAuditing
@@ -155,6 +156,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
 
     "not do anything if the datastream service is throwing an error as in this specific case datastream is logging the event" in {
 
+
       implicit val hc = HeaderCarrier()
 
       val httpWithAudit = new HttpAuditingWithAuditException
@@ -180,6 +182,8 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
     implicit val hc = HeaderCarrier(deviceID = Some(deviceID))
 
     "send unique event of type OutboundCall" in {
+
+
       val httpWithAudit = new HttpWithAuditing
 
       val requestBody = None
@@ -190,7 +194,6 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
       implicit val hc = HeaderCarrier(deviceID = Some(deviceID), trueClientIp = Some("192.168.1.2"), trueClientPort = Some("12000")).withExtraHeaders("Surrogate" -> "true")
 
       httpWithAudit.audit(request, response)
-
       httpWithAudit.auditConnector.recordedMergedEvent shouldBe defined
 
       val dataEvent = httpWithAudit.auditConnector.recordedMergedEvent.get
@@ -209,6 +212,8 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
     }
 
     "send unique event of type OutboundCall including the requestbody" in {
+
+
       val httpWithAudit = new HttpWithAuditing
 
       val postVerb = "POST"
@@ -245,6 +250,8 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
     implicit val hc = HeaderCarrier()
 
     "not generate an audit event" in {
+
+
       forAll(auditUris) { auditUri =>
         val httpWithAudit = new HttpWithAuditing
         val requestBody = None
@@ -252,19 +259,19 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
         val request = httpWithAudit.buildRequest(auditUri, getVerb, requestBody)
 
         httpWithAudit.audit(request, response)
-
         httpWithAudit.auditConnector.recordedMergedEvent shouldBe None
       }
     }
 
     "not generate an audit event when an exception has been thrown" in {
+
+
       forAll(auditUris) { auditUri =>
         val httpWithAudit = new HttpWithAuditing
         val requestBody = None
 
         val request = httpWithAudit.buildRequest(auditUri, getVerb, requestBody)
         httpWithAudit.auditRequestWithException(request, "An exception occured when calling sendevent datastream")
-
         httpWithAudit.auditConnector.recordedMergedEvent shouldBe None
       }
     }

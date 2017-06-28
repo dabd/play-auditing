@@ -25,15 +25,17 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.HeaderNames._
 import uk.gov.hmrc.play.http.logging.RequestId
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class AuditSpec extends WordSpecLike with Matchers with Eventually {
-
+  import scala.concurrent.ExecutionContext.Implicits.global
+  
   class MockAudit(appName: String, connector: AuditConnector) extends Audit(appName, connector) {
 
     var capturedDataEvent: DataEvent = _
 
-    override def sendDataEvent: (DataEvent) => Unit = capture
+    override def sendDataEvent (event: DataEvent)(implicit ec: ExecutionContext): Unit =
+      capture(event)
 
     def capture(de: DataEvent): Unit = {
       this.capturedDataEvent = de

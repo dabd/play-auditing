@@ -21,8 +21,6 @@ import akka.stream.{ActorMaterializer, Materializer}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.{Matchers, WordSpecLike}
-import play.api.libs.iteratee.Iteratee
-import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test.{FakeApplication, FakeRequest}
 import uk.gov.hmrc.play.audit.EventTypes
@@ -32,8 +30,7 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.Concurrent.await
 import uk.gov.hmrc.play.test.Http._
 
-////!@import scala.concurrent.ExecutionContext.Implicits.global
-import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -79,13 +76,9 @@ class AuditFilterSpec extends WordSpecLike with Matchers with Eventually with Sc
       implicit val materializer = ActorMaterializer()
 
       val value1 = auditFilter.apply(nextAction)(request)
-      Thread.sleep(2000)
       val result = await(value1.run)
-      Thread.sleep(2000)
 
       await(enumerateResponseBody(result))
-
-      Thread.sleep(2000)
 
       eventually {
         val events = mockAuditConnector.events

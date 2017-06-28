@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.play.audit.http
 
-import uk.gov.hmrc.play.HeaderCarrierConverter
-import uk.gov.hmrc.play.audit.AuditExtensions
+import uk.gov.hmrc.play.audit.{AuditExtensions, HeaderCarrierConverter}
 import uk.gov.hmrc.play.audit.model.DataEvent
 import uk.gov.hmrc.play.http.HeaderCarrier
 

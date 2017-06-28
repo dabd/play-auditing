@@ -47,7 +47,6 @@ private object AppDependencies {
     "com.typesafe.play" %% "play" % PlayVersion.current,
     ws,
     "uk.gov.hmrc" %% "http-verbs-core" % "0.1-SNAPSHOT",
-    "uk.gov.hmrc" %% "play-http-verbs" % "19.0-SNAPSHOT",
     "com.ning" % "async-http-client" % "1.8.15"
   )
 
