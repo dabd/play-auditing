@@ -29,7 +29,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class AuditSpec extends WordSpecLike with Matchers with Eventually {
   import scala.concurrent.ExecutionContext.Implicits.global
-  
+
   class MockAudit(appName: String, connector: AuditConnector) extends Audit(appName, connector) {
 
     var capturedDataEvent: DataEvent = _

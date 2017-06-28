@@ -18,16 +18,13 @@ package uk.gov.hmrc.play.audit.http.connector
 
 import play.api.{Logger, LoggerLike}
 import play.api.libs.json.{JsValue, Json}
-import play.api.libs.ws.{WS, WSRequest}
-import uk.gov.hmrc.play.audit.WSHttpResponse
+import play.api.libs.ws.{WS, WSRequest, WSResponse}
 import uk.gov.hmrc.play.audit.http.config.AuditingConfig
 import uk.gov.hmrc.play.audit.model.{AuditEvent, MergedDataEvent}
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.http.logging.{ConnectionTracing, LoggingDetails}
 
 import scala.concurrent.{ExecutionContext, Future}
-
-
 import play.api.Play.current
 
 trait AuditEventFailureKeys {
@@ -47,7 +44,7 @@ object AuditResult {
 
 trait ResponseFormatter {
   import AuditEventFailureKeys._
-  protected def checkResponse(body: JsValue, response: HttpResponse): Option[String] = {
+  protected def checkResponse(body: JsValue, response: WSResponse): Option[String] = {
     if (response.status >= 300) Some(s"$LoggingAuditFailureResponseKey : status code : ${response.status} : audit item : $body")
     else None
   }
@@ -75,7 +72,7 @@ trait LoggerProvider {
 
 trait ResultHandler extends ResponseFormatter {
   this: LoggerProvider =>
-  protected def handleResult(resultF: Future[HttpResponse], body: JsValue)(implicit ex: ExecutionContext): Future[HttpResponse] = {
+  protected def handleResult(resultF: Future[WSResponse], body: JsValue)(implicit ex: ExecutionContext): Future[WSResponse] = {
 
     resultF
       .recoverWith { case t =>
@@ -99,9 +96,9 @@ trait AuditorImpl extends Auditor with ConnectionTracing with ResultHandler {
 
   protected def buildRequest(url: String)(implicit hc: HeaderCarrier): WSRequest = WS.url(url).withHeaders(hc.headers: _*)
 
-  protected def callAuditConsumer(url:String , body: JsValue)(implicit hc: HeaderCarrier, ec : ExecutionContext): Future[HttpResponse] = {
+  protected def callAuditConsumer(url:String , body: JsValue)(implicit hc: HeaderCarrier, ec : ExecutionContext): Future[WSResponse] = {
     withTracing("Post", url) {
-      buildRequest(url).post(body).map(new WSHttpResponse(_))(ec)
+      buildRequest(url).post(body)
     }(hc, ec)
   }
 

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.play.audit.http.connector
 
 import play.api.libs.json.JsValue
+import play.api.libs.ws.WSResponse
 import uk.gov.hmrc.play.audit.http.config.AuditingConfig
 import uk.gov.hmrc.play.audit.http.connector.AuditResult.Success
 import uk.gov.hmrc.play.audit.model.{AuditEvent, MergedDataEvent}
@@ -50,7 +51,7 @@ class MockAuditConnector extends AuditConnector {
 
   override protected def logError(s: String): Unit = ???
 
-  override protected def callAuditConsumer(url:String, body: JsValue)(implicit hc: HeaderCarrier, ec : ExecutionContext): Future[HttpResponse] = ???
+  override protected def callAuditConsumer(url:String, body: JsValue)(implicit hc: HeaderCarrier, ec : ExecutionContext): Future[WSResponse] = ???
 
   override def auditingConfig: AuditingConfig = ???
 }

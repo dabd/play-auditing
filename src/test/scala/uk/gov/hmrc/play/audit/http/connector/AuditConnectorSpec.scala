@@ -35,15 +35,15 @@ import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.Future
 
-class ResponseFormatterSpec extends WordSpec with Matchers with ResponseFormatter {
+class ResponseFormatterSpec extends WordSpec with Matchers with ResponseFormatter with MockitoSugar {
   "checkResponse" should {
     "return None for any response code less than 300" in {
       val body = Json.obj("key" -> "value")
 
       (0 to 299).foreach { code =>
-        val response = new HttpResponse {
-          override val status = code
-        }
+        val response = mock[WSResponse]
+        when(response.status).thenReturn(code)
+
         checkResponse(body, response) shouldBe None
       }
     }
@@ -52,9 +52,9 @@ class ResponseFormatterSpec extends WordSpec with Matchers with ResponseFormatte
       val body = Json.obj("key" -> "value")
 
       (300 to 599).foreach { code =>
-        val response = new HttpResponse {
-          override val status = code
-        }
+        val response = mock[WSResponse]
+        when(response.status).thenReturn(code)
+
         val result = checkResponse(body, response)
         result shouldNot be(None)
 
@@ -101,9 +101,8 @@ class ResultHandlerSpec extends WordSpec
     "not log any error or for a result status of 200" in {
       val body = Json.obj("key" -> "value")
 
-      val response = new HttpResponse {
-        override val status = 200
-      }
+      val response = mock[WSResponse]
+      when(response.status).thenReturn(200)
 
       handleResult(Future.successful(response), body)
       verifyNoMoreInteractions(mockLogger)
@@ -120,9 +119,8 @@ class ResultHandlerSpec extends WordSpec
       val body = Json.obj("key" -> "value")
 
       val code = 300
-      val response = new HttpResponse {
-        override val status = code
-      }
+      val response = mock[WSResponse]
+      when(response.status).thenReturn(code)
 
       val f = Future.successful(response)
       handleResult(f, body).failed.futureValue

@@ -16,12 +16,12 @@
 
 package uk.gov.hmrc.play.audit.http.config
 
-import play.api.{GlobalSettings, PlayException}
+import play.api.GlobalSettings
 import play.api.mvc.{RequestHeader, Result}
 import uk.gov.hmrc.play.audit.EventTypes._
 import uk.gov.hmrc.play.audit.http.HttpAuditEvent
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.http.NotFoundException
+import uk.gov.hmrc.play.http.{JsValidationException, NotFoundException}
 
 import scala.concurrent.Future
 
@@ -37,7 +37,7 @@ trait ErrorAuditingSettings extends GlobalSettings with HttpAuditEvent {
   override def onError(request: RequestHeader, ex: Throwable): Future[Result] = {
     val code = ex match {
       case e: NotFoundException => ResourceNotFound
-      //case jsError: JsValidationException => ServerValidationError
+      case jsError: JsValidationException => ServerValidationError
       case _ => ServerInternalError
     }
 
@@ -52,8 +52,6 @@ trait ErrorAuditingSettings extends GlobalSettings with HttpAuditEvent {
   }
 
   override def onBadRequest(request: RequestHeader, error: String): Future[Result] = {
-
-
     auditConnector.sendEvent(dataEvent(ServerValidationError, badRequestError, request))
     super.onBadRequest(request, error)
   }
